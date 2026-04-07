@@ -11,30 +11,75 @@ export interface DiscoveredScholarship {
   source_id: string
 }
 
+/**
+ * Map student keywords to URL-friendly slugs for each source.
+ */
+function slugify(keyword: string): string {
+  return keyword.toLowerCase().replace(/\s+/g, '-')
+}
+
 const SOURCES: ScholarshipSource[] = [
   {
-    name: 'scholarships.com',
-    buildSearchUrls: (keywords) =>
-      keywords.map(
-        (kw) =>
-          `https://www.scholarships.com/financial-aid/college-scholarships/scholarship-directory/academic-major/${encodeURIComponent(kw)}`
-      ),
+    name: 'fastweb',
+    buildSearchUrls: (keywords) => {
+      const urls: string[] = []
+      // Browse first few pages of all scholarships
+      for (let page = 1; page <= 3; page++) {
+        urls.push(
+          `https://www.fastweb.com/college-scholarships/external_scholarships_search/browse-scholarships?page=${page}`
+        )
+      }
+      // Major-specific directories
+      for (const kw of keywords) {
+        const slug = slugify(kw)
+        urls.push(
+          `https://www.fastweb.com/directory/scholarships-for-${slug}-majors`
+        )
+      }
+      return urls
+    },
   },
   {
     name: 'bold.org',
-    buildSearchUrls: (keywords) =>
-      keywords.map(
-        (kw) =>
-          `https://bold.org/scholarships/search/?q=${encodeURIComponent(kw)}`
-      ),
-  },
-  {
-    name: 'goingmerry',
-    buildSearchUrls: (keywords) =>
-      keywords.map(
-        (kw) =>
-          `https://www.goingmerry.com/scholarships?query=${encodeURIComponent(kw)}`
-      ),
+    buildSearchUrls: (keywords) => {
+      const urls: string[] = []
+      // First few pages of all scholarships
+      for (let page = 1; page <= 3; page++) {
+        urls.push(`https://bold.org/scholarships/${page}/`)
+      }
+      // By major
+      for (const kw of keywords) {
+        const slug = slugify(kw)
+        urls.push(
+          `https://bold.org/scholarships/by-major/${slug}-scholarships/`
+        )
+      }
+      // By state (only for state-like keywords — 2 chars)
+      for (const kw of keywords) {
+        if (kw.length === 2) {
+          // Map state abbreviations to full names
+          const stateMap: Record<string, string> = {
+            HI: 'hawaii',
+            CA: 'california',
+            NY: 'new-york',
+            TX: 'texas',
+            FL: 'florida',
+            WA: 'washington',
+            OR: 'oregon',
+            AZ: 'arizona',
+            CO: 'colorado',
+            NE: 'nebraska',
+          }
+          const stateName = stateMap[kw.toUpperCase()]
+          if (stateName) {
+            urls.push(
+              `https://bold.org/scholarships/by-state/${stateName}-scholarships/`
+            )
+          }
+        }
+      }
+      return urls
+    },
   },
 ]
 
@@ -155,7 +200,10 @@ async function scrapeSource(
     try {
       const response = await fetch(searchUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; ScholarshipBot/1.0)',
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
         },
         signal: AbortSignal.timeout(15000),
       })
