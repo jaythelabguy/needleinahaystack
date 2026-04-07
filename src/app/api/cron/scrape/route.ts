@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { extractScholarshipFromContent } from '@/lib/scraping/extractor'
-import { scrapeAllSources, buildKeywordsFromStudents } from '@/lib/scraping/sources'
+import { scrapeAllSources, buildProfileFromStudents } from '@/lib/scraping/sources'
 import { runMatchingForScholarship } from '@/lib/matching/engine'
 
 // Max scholarships to ingest per cron run to stay within Vercel function time limits
@@ -37,12 +37,16 @@ export async function GET(request: Request) {
       })
     }
 
-    const keywords = buildKeywordsFromStudents(students)
-    log.push(`Keywords: ${keywords.join(', ')}`)
+    const profile = buildProfileFromStudents(students)
+    log.push(`Majors: ${profile.majors.join(', ')}`)
+    log.push(`States: ${profile.states.join(', ')}`)
+    log.push(`Schools: ${profile.schools.join(', ')}`)
+    log.push(`Ethnicities: ${profile.ethnicities.join(', ')}`)
+    log.push(`Sports: ${profile.sports.join(', ')}`)
 
     // 2. Discover scholarship URLs from all sources
     const { results: scrapeResults, totalDiscovered } =
-      await scrapeAllSources(keywords)
+      await scrapeAllSources(profile)
 
     for (const r of scrapeResults) {
       log.push(`${r.source}: ${r.discovered.length} found, ${r.errors.length} errors`)

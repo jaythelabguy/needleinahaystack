@@ -80,6 +80,17 @@ export function calculateScore(
     }
   }
 
+  // Ethnicity match: +15
+  if (student.ethnicity?.length && elig.ethnicities?.length) {
+    const ethnicityMatch = student.ethnicity.some((e) =>
+      elig.ethnicities!.some((ee) => ee.toLowerCase() === e.toLowerCase())
+    )
+    if (ethnicityMatch) {
+      score += 15
+      reasons.push(`Ethnicity match`)
+    }
+  }
+
   // Financial need alignment: +10
   if (student.financial_need && elig.financial_need) {
     score += 10

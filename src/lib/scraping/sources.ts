@@ -2,7 +2,7 @@ import { getClaudeClient } from '@/lib/claude'
 
 export interface ScholarshipSource {
   name: string
-  buildSearchUrls: (keywords: string[]) => string[]
+  buildSearchUrls: (profile: StudentProfile) => string[]
 }
 
 export interface DiscoveredScholarship {
@@ -11,29 +11,59 @@ export interface DiscoveredScholarship {
   source_id: string
 }
 
-/**
- * Map student keywords to URL-friendly slugs for each source.
- */
+/** Aggregated profile data from all students, used to drive search queries. */
+export interface StudentProfile {
+  majors: string[]
+  states: string[]
+  schools: string[]
+  interests: string[]
+  sports: string[]
+  ethnicities: string[]
+}
+
 function slugify(keyword: string): string {
   return keyword.toLowerCase().replace(/\s+/g, '-')
+}
+
+/** Map of known university scholarship pages. */
+const UNIVERSITY_SCHOLARSHIP_URLS: Record<string, string[]> = {
+  'creighton university': [
+    'https://www.creighton.edu/financial-aid/scholarships-grants',
+    'https://www.creighton.edu/financial-aid/scholarships-grants/freshman-scholarships',
+    'https://www.creighton.edu/financial-aid/scholarships-grants/departmental-scholarships',
+  ],
 }
 
 const SOURCES: ScholarshipSource[] = [
   {
     name: 'fastweb',
-    buildSearchUrls: (keywords) => {
+    buildSearchUrls: (profile) => {
       const urls: string[] = []
-      // Browse first few pages of all scholarships
+      // Browse first few pages
       for (let page = 1; page <= 3; page++) {
         urls.push(
           `https://www.fastweb.com/college-scholarships/external_scholarships_search/browse-scholarships?page=${page}`
         )
       }
-      // Major-specific directories
-      for (const kw of keywords) {
-        const slug = slugify(kw)
+      // By major
+      for (const major of profile.majors) {
         urls.push(
-          `https://www.fastweb.com/directory/scholarships-for-${slug}-majors`
+          `https://www.fastweb.com/directory/scholarships-for-${slugify(major)}-majors`
+        )
+      }
+      // By ethnicity
+      for (const eth of profile.ethnicities) {
+        urls.push(
+          `https://www.fastweb.com/directory/scholarships-for-${slugify(eth)}-students`
+        )
+        urls.push(
+          `https://www.fastweb.com/directory/${slugify(eth)}-scholarships`
+        )
+      }
+      // By sport
+      for (const sport of profile.sports) {
+        urls.push(
+          `https://www.fastweb.com/directory/${slugify(sport)}-scholarships`
         )
       }
       return urls
@@ -41,42 +71,83 @@ const SOURCES: ScholarshipSource[] = [
   },
   {
     name: 'bold.org',
-    buildSearchUrls: (keywords) => {
+    buildSearchUrls: (profile) => {
       const urls: string[] = []
-      // First few pages of all scholarships
+      // Browse pages
       for (let page = 1; page <= 3; page++) {
         urls.push(`https://bold.org/scholarships/${page}/`)
       }
       // By major
-      for (const kw of keywords) {
-        const slug = slugify(kw)
+      for (const major of profile.majors) {
         urls.push(
-          `https://bold.org/scholarships/by-major/${slug}-scholarships/`
+          `https://bold.org/scholarships/by-major/${slugify(major)}-scholarships/`
         )
       }
-      // By state (only for state-like keywords — 2 chars)
-      for (const kw of keywords) {
-        if (kw.length === 2) {
-          // Map state abbreviations to full names
-          const stateMap: Record<string, string> = {
-            HI: 'hawaii',
-            CA: 'california',
-            NY: 'new-york',
-            TX: 'texas',
-            FL: 'florida',
-            WA: 'washington',
-            OR: 'oregon',
-            AZ: 'arizona',
-            CO: 'colorado',
-            NE: 'nebraska',
-          }
-          const stateName = stateMap[kw.toUpperCase()]
-          if (stateName) {
-            urls.push(
-              `https://bold.org/scholarships/by-state/${stateName}-scholarships/`
-            )
-          }
+      // By state
+      const stateMap: Record<string, string> = {
+        HI: 'hawaii', CA: 'california', NY: 'new-york', TX: 'texas',
+        FL: 'florida', WA: 'washington', OR: 'oregon', AZ: 'arizona',
+        CO: 'colorado', NE: 'nebraska', IL: 'illinois', OH: 'ohio',
+        PA: 'pennsylvania', GA: 'georgia', NC: 'north-carolina',
+        MI: 'michigan', NJ: 'new-jersey', VA: 'virginia', MA: 'massachusetts',
+      }
+      for (const state of profile.states) {
+        const stateName = stateMap[state.toUpperCase()]
+        if (stateName) {
+          urls.push(
+            `https://bold.org/scholarships/by-state/${stateName}-scholarships/`
+          )
         }
+      }
+      // By demographics/ethnicity
+      for (const eth of profile.ethnicities) {
+        const slug = slugify(eth)
+        urls.push(
+          `https://bold.org/scholarships/by-demographics/${slug}/`
+        )
+        urls.push(
+          `https://bold.org/scholarships/by-demographics/minorities/${slug}-scholarships/`
+        )
+      }
+      return urls
+    },
+  },
+  {
+    name: 'university',
+    buildSearchUrls: (profile) => {
+      const urls: string[] = []
+      for (const school of profile.schools) {
+        const key = school.toLowerCase()
+        const schoolUrls = UNIVERSITY_SCHOLARSHIP_URLS[key]
+        if (schoolUrls) {
+          urls.push(...schoolUrls)
+        }
+      }
+      return urls
+    },
+  },
+  {
+    name: 'scholarships360',
+    buildSearchUrls: (profile) => {
+      const urls: string[] = [
+        'https://www.scholarships360.org/scholarships/easy-scholarships-to-apply-for/',
+        'https://www.scholarships360.org/scholarships/no-essay-scholarships/',
+      ]
+      // Ethnicity-specific curated lists
+      for (const eth of profile.ethnicities) {
+        const slug = slugify(eth)
+        urls.push(
+          `https://www.scholarships360.org/scholarships/${slug}-scholarships/`
+        )
+        urls.push(
+          `https://www.scholarships360.org/scholarships/scholarships-for-${slug}-students/`
+        )
+      }
+      // Major-specific
+      for (const major of profile.majors) {
+        urls.push(
+          `https://www.scholarships360.org/scholarships/${slugify(major)}-scholarships/`
+        )
       }
       return urls
     },
@@ -85,7 +156,6 @@ const SOURCES: ScholarshipSource[] = [
 
 /**
  * Use Claude to extract scholarship links from a search results page.
- * This approach is resilient to HTML structure changes.
  */
 async function extractLinksFromSearchPage(
   html: string,
@@ -124,7 +194,7 @@ async function extractLinksFromSearchPage(
     messages: [
       {
         role: 'user',
-        content: `Extract all individual scholarship page URLs from this search results page. Only include links to specific scholarship detail pages, not navigation, ads, or category links. Return absolute URLs (prepend the site's origin if needed).
+        content: `Extract all individual scholarship page URLs from this webpage. Include links to specific scholarship detail/info pages. Return absolute URLs (prepend the site's origin if needed). If this is a university financial aid page, extract links to individual scholarship descriptions or application pages.
 
 Source site: ${sourceName}
 Page URL: ${sourceUrl}
@@ -152,9 +222,9 @@ ${textContent}`,
 }
 
 /**
- * Build search keywords from all student profiles in the database.
+ * Build a structured profile from all student records for driving searches.
  */
-export function buildKeywordsFromStudents(
+export function buildProfileFromStudents(
   students: Array<{
     intended_major?: string | null
     state?: string | null
@@ -163,18 +233,31 @@ export function buildKeywordsFromStudents(
     intended_school?: string | null
     ethnicity?: string[] | null
   }>
-): string[] {
-  const keywords = new Set<string>()
+): StudentProfile {
+  const majors = new Set<string>()
+  const states = new Set<string>()
+  const schools = new Set<string>()
+  const interests = new Set<string>()
+  const sports = new Set<string>()
+  const ethnicities = new Set<string>()
 
   for (const s of students) {
-    if (s.intended_major) keywords.add(s.intended_major)
-    if (s.state) keywords.add(s.state)
-    if (s.intended_school) keywords.add(s.intended_school)
-    if (s.interests) s.interests.forEach((i) => keywords.add(i))
-    if (s.sports) s.sports.forEach((sp) => keywords.add(sp))
+    if (s.intended_major) majors.add(s.intended_major)
+    if (s.state) states.add(s.state)
+    if (s.intended_school) schools.add(s.intended_school)
+    if (s.interests) s.interests.forEach((i) => interests.add(i))
+    if (s.sports) s.sports.forEach((sp) => sports.add(sp))
+    if (s.ethnicity) s.ethnicity.forEach((e) => ethnicities.add(e))
   }
 
-  return Array.from(keywords)
+  return {
+    majors: Array.from(majors),
+    states: Array.from(states),
+    schools: Array.from(schools),
+    interests: Array.from(interests),
+    sports: Array.from(sports),
+    ethnicities: Array.from(ethnicities),
+  }
 }
 
 export interface ScrapeResult {
@@ -183,18 +266,15 @@ export interface ScrapeResult {
   errors: string[]
 }
 
-/**
- * Scrape a single source for scholarship URLs using the given keywords.
- */
 async function scrapeSource(
   source: ScholarshipSource,
-  keywords: string[]
+  profile: StudentProfile
 ): Promise<ScrapeResult> {
   const discovered: DiscoveredScholarship[] = []
   const errors: string[] = []
   const seenUrls = new Set<string>()
 
-  const searchUrls = source.buildSearchUrls(keywords)
+  const searchUrls = source.buildSearchUrls(profile)
 
   for (const searchUrl of searchUrls) {
     try {
@@ -234,13 +314,13 @@ async function scrapeSource(
 }
 
 /**
- * Run all scrapers against the given keywords. Returns discovered scholarship URLs.
+ * Run all scrapers against the student profile. Returns discovered scholarship URLs.
  */
 export async function scrapeAllSources(
-  keywords: string[]
+  profile: StudentProfile
 ): Promise<{ results: ScrapeResult[]; totalDiscovered: number }> {
   const results = await Promise.allSettled(
-    SOURCES.map((source) => scrapeSource(source, keywords))
+    SOURCES.map((source) => scrapeSource(source, profile))
   )
 
   const settled: ScrapeResult[] = results.map((r, i) =>
