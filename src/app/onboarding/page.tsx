@@ -129,15 +129,26 @@ export default function OnboardingPage() {
       work_experience: [],
     }
 
-    const { error: insertError } = await supabase
+    const { data: student, error: insertError } = await supabase
       .from('students')
       .insert(payload)
+      .select('id')
+      .single()
 
     if (insertError) {
       setError(insertError.message)
       setLoading(false)
       return
     }
+
+    // Trigger matching engine for the new profile
+    fetch('/api/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ student_id: student.id }),
+    }).catch(() => {
+      // Non-blocking — matches will be generated in background
+    })
 
     router.push('/dashboard')
     router.refresh()
