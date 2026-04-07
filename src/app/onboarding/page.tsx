@@ -259,8 +259,8 @@ export default function OnboardingPage() {
                 <Label htmlFor="ethnicity">Ethnicity (comma-separated)</Label>
                 <Input
                   id="ethnicity"
-                  value={form.ethnicity.join(', ')}
-                  onChange={(e) =>
+                  defaultValue={form.ethnicity.join(', ')}
+                  onBlur={(e) =>
                     updateField(
                       'ethnicity',
                       e.target.value.split(',').map((s) => s.trim()).filter(Boolean)

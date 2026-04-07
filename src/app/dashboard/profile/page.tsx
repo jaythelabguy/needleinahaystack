@@ -143,8 +143,8 @@ export default function ProfilePage() {
           <div>
             <Label>Ethnicity (comma-separated)</Label>
             <Input
-              value={student.ethnicity?.join(', ') || ''}
-              onChange={(e) =>
+              defaultValue={student.ethnicity?.join(', ') || ''}
+              onBlur={(e) =>
                 update(
                   'ethnicity',
                   e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
@@ -248,8 +248,8 @@ export default function ProfilePage() {
           <div>
             <Label>Sports (comma-separated)</Label>
             <Input
-              value={student.sports?.join(', ') || ''}
-              onChange={(e) =>
+              defaultValue={student.sports?.join(', ') || ''}
+              onBlur={(e) =>
                 update(
                   'sports',
                   e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
@@ -260,8 +260,8 @@ export default function ProfilePage() {
           <div>
             <Label>Interests (comma-separated)</Label>
             <Input
-              value={student.interests?.join(', ') || ''}
-              onChange={(e) =>
+              defaultValue={student.interests?.join(', ') || ''}
+              onBlur={(e) =>
                 update(
                   'interests',
                   e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
@@ -272,8 +272,8 @@ export default function ProfilePage() {
           <div>
             <Label>Essay Topics (comma-separated)</Label>
             <Input
-              value={student.essay_topics?.join(', ') || ''}
-              onChange={(e) =>
+              defaultValue={student.essay_topics?.join(', ') || ''}
+              onBlur={(e) =>
                 update(
                   'essay_topics',
                   e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
