@@ -256,6 +256,20 @@ export default function OnboardingPage() {
                 </select>
               </div>
               <div>
+                <Label htmlFor="ethnicity">Ethnicity (comma-separated)</Label>
+                <Input
+                  id="ethnicity"
+                  value={form.ethnicity.join(', ')}
+                  onChange={(e) =>
+                    updateField(
+                      'ethnicity',
+                      e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                    )
+                  }
+                  placeholder="e.g., Native Hawaiian, Pacific Islander"
+                />
+              </div>
+              <div>
                 <Label htmlFor="citizenship">Citizenship</Label>
                 <select
                   id="citizenship"

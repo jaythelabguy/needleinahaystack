@@ -66,6 +66,7 @@ export default function ProfilePage() {
         state: student.state,
         city: student.city,
         gender: student.gender,
+        ethnicity: student.ethnicity,
         citizenship: student.citizenship,
         financial_need: student.financial_need,
         intended_major: student.intended_major,
@@ -123,6 +124,34 @@ export default function ProfilePage() {
                 onChange={(e) => update('last_name', e.target.value)}
               />
             </div>
+          </div>
+          <div>
+            <Label>Gender</Label>
+            <select
+              value={student.gender || ''}
+              onChange={(e) => update('gender', e.target.value || null)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
+            >
+              <option value="">Select</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+              <option value="non-binary">Non-binary</option>
+              <option value="other">Other</option>
+              <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
+          </div>
+          <div>
+            <Label>Ethnicity (comma-separated)</Label>
+            <Input
+              value={student.ethnicity?.join(', ') || ''}
+              onChange={(e) =>
+                update(
+                  'ethnicity',
+                  e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                )
+              }
+              placeholder="e.g., Native Hawaiian, Pacific Islander"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
